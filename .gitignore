@@ -1,0 +1,6 @@
+./client/remote-fb-client 
+./client/obj/ 
+
+./server/public/ 
+./server/zig-out/
+./server/zig-cache/
