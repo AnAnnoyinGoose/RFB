@@ -1,7 +1,7 @@
 CC=cc
 SRCDIR=src
 OBJDIR=obj
-BIN=remote-fb-client
+BIN=rfb-client
 FLAGS=-Wall -lraylib
 
 SRCS=$(wildcard $(SRCDIR)/*.c)

@@ -1,4 +1,4 @@
-client/remote-fb-client 
+client/rfb-client 
 client/obj/
 
 server/public/ 
