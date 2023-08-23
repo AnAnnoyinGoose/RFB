@@ -1,15 +1,4 @@
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#include <assert.h>
-#include <raylib.h>
+#include "main.h"
 
 #define PORT 344
 #define HOST "0.0.0.0"
@@ -89,23 +78,19 @@ int try_login(int socket_fd) {
     printf("Enter password: ");
     fgets(pswd, 1024, stdin);
     send(socket_fd, pswd, strlen(pswd), 0);
+    n = recv(socket_fd, buffer, sizeof(buffer), 0);
+    buffer[n] = '\0';
+    if (strstr(buffer, "RFB-L-OK") != NULL)
+      return 1; // login succeeded
+    return 0;
   }
-  n = recv(socket_fd, buffer, sizeof(buffer), 0);
-  buffer[n] = '\0';
-  if (strstr(buffer, "RFB-L-OK") != NULL)
-    return 1; // login succeeded
   return 0;
 }
 
 struct File **get_files(int socket_fd) {
   char buffer[1024];
-#define MSG "RFBv0.1nR"
-  ssize_t n = send(socket_fd, MSG, strlen(MSG), 0);
-#undef MSG
-  assert(n > 0 && "send() failed");
-
+  ssize_t n;
   struct File **files = malloc(2 * sizeof(struct File *));
-
   while (true) {
     n = recv(socket_fd, buffer, sizeof(buffer), 0);
     buffer[n] = '\0';
@@ -127,6 +112,7 @@ struct File **get_files(int socket_fd) {
 
 int main(void) {
   int socket_fd = init_client_socket();
+  printf("Connected to %s:%d\n", HOST, PORT);
   if (!is_rfb_server(socket_fd)) {
     printf("Not a rfb server\n");
     return 1;
@@ -137,6 +123,7 @@ int main(void) {
     printf("Login failed\n");
     return 1; // login failed
   }
+  printf("Logged in\n");
 
   struct File **files = get_files(socket_fd);
 
