@@ -58,16 +58,19 @@ pub const Server = struct {
                 defer data_all.deinit();
                 for (arr) |f| {
                     // concat the path with a newline
-                    const data = try std.fmt.allocPrint(self.allocator, "[ {s} [...] {d} [...] {s} ]\n", .{ f.path, f.size, f.mime });
+                    const data = try std.fmt.allocPrint(self.allocator, "[ {s} \n\r {d} \n\r {s} ] \n", .{ f.path, f.size, f.mime });
                     data_all.append(data) catch |err| {
                         std.debug.print("Array Error: {s}\n", .{@errorName(err)});
                         return;
                     };
                 }
                 _ = try conn.stream.write("SfL\n"); // start of file list
+                std.time.sleep(100.0);
                 for (data_all.items) |data| {
                     _ = try conn.stream.write(data);
+                    std.time.sleep(100.0);
                 }
+                std.time.sleep(100.0);
                 _ = try conn.stream.write("EfL\n");
             },
             .err => {
