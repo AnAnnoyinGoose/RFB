@@ -1,35 +1,14 @@
 #include "main.h"
+#include <raylib.h>
 
 #define PORT 344
 #define HOST "0.0.0.0"
 
-typedef enum { Private, Public } Owner;
+#define HEIGHT 450
+#define WIDTH 800
 
-struct File {
-  const char *name, *path, *mime_type, *md5, *size;
-  Owner owner;
-} File;
-
-struct File *new_file() {
-  struct File *f = malloc(sizeof(struct File));
-  f->name = NULL;
-  f->path = NULL;
-  f->mime_type = NULL;
-  f->md5 = NULL;
-  f->size = NULL;
-  f->owner = Private;
-  return f;
-}
-
-void init(void) {
-  const int screenWidth = 800;
-  const int screenHeight = 450;
-  InitWindow(screenWidth, screenHeight, "RFBv0.1nR Client");
-  SetTargetFPS(60);
-  SetConfigFlags(FLAG_MSAA_4X_HINT);
-}
-
-void winclose(void) { CloseWindow(); }
+static int socket_fd;
+static Font font;
 
 int init_client_socket(void) {
   int socket_fd;
@@ -74,10 +53,10 @@ int try_login(int socket_fd) {
   n = recv(socket_fd, buffer, sizeof(buffer), 0);
   buffer[n] = '\0';
   if (strstr(buffer, "RFB-L-IN") != NULL) {
-    char pswd[1024];
-    printf("Enter password: ");
-    fgets(pswd, 1024, stdin);
-    send(socket_fd, pswd, strlen(pswd), 0);
+    // char pswd[1024];
+    // printf("Enter password: ");
+    // fgets(pswd, 1024, stdin);
+    send(socket_fd, "password\n", strlen("password\n"), 0);
     n = recv(socket_fd, buffer, sizeof(buffer), 0);
     buffer[n] = '\0';
     if (strstr(buffer, "RFB-L-OK") != NULL)
@@ -87,31 +66,60 @@ int try_login(int socket_fd) {
   return 0;
 }
 
-struct File **get_files(int socket_fd) {
-  char buffer[1024];
-  ssize_t n;
-  struct File **files = malloc(2 * sizeof(struct File *));
-  while (true) {
-    n = recv(socket_fd, buffer, sizeof(buffer), 0);
-    buffer[n] = '\0';
-    if (n == 0)
-      continue;
-    if (strstr(buffer, "SfL") != NULL)
-      continue;
-    if (strstr(buffer, "EfL") != NULL)
-      break;
-    struct File *f = new_file();
-#define DELIM "\r\n" // 1st is path then size and mime
-    f->path = strtok(buffer, DELIM) + 2;
-    f->size = strtok(NULL, DELIM);
-    f->mime_type = (strtok(NULL, DELIM));
-    printf("%s %s %s\n", f->path, f->size, f->mime_type);
+void init_window(void) {
+  InitWindow(WIDTH, HEIGHT, "RFB Client");
+  SetTargetFPS(60);
+  font = LoadFontEx("resources/FiraCodeNerdFont-Regular.ttf", 18, 0, 0);
+}
+
+void make_text_button(int x, int y, int w, int h, const char *text,
+                      void(callback)(void *), void *data) {
+  Rectangle button = {x, y, w, h};
+
+  if (CheckCollisionPointRec(GetMousePosition(), button)) {
+    DrawRectangle(button.x, button.y, button.width, button.height, BLUE);
+    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+      callback(data);
+    }
+  } else {
+    DrawRectangle(button.x, button.y, button.width, button.height, GRAY);
   }
-  return files;
+  Vector2 pos = {x + 10, y + 10};
+  DrawTextEx(font, text, pos, 18, 1, BLACK);
+}
+
+
+
+
+
+
+void load_file_preview_window(void *data) {
+  File file = *(File *)data;
+  while (WindowShouldClose() == 0) {
+    ClearBackground(GRAY);
+    Vector2 pos = {0, 0};
+    DrawTextEx(font, file.path, pos, 18, 1, BLACK);
+    pos.y += 20;
+    DrawTextEx(font, file.size, pos, 18, 1, BLACK);
+    pos.y += 20;
+    DrawTextEx(font, file.type, pos, 18, 1, BLACK);
+    EndDrawing();
+  }
+}
+
+void draw_file(File file, Vector2 *last_position) {
+  Vector2 position = {last_position->x, last_position->y + 35};
+  {
+    void *data = &file;
+    make_text_button(position.x, position.y, WIDTH, 30, file.name,
+                     load_file_preview_window, data);
+  }
+  *last_position = position;
 }
 
 int main(void) {
-  int socket_fd = init_client_socket();
+  socket_fd = init_client_socket();
+  set_file_socket_fd(socket_fd);
   printf("Connected to %s:%d\n", HOST, PORT);
   if (!is_rfb_server(socket_fd)) {
     printf("Not a rfb server\n");
@@ -125,20 +133,23 @@ int main(void) {
   }
   printf("Logged in\n");
 
-  struct File **files = get_files(socket_fd);
+  Files files;
+  init_files_vector(&files);
+  get_files_from_server(&files);
 
-  free(files);
-  return 0;
-  init();
+  init_window();
 
   while (!WindowShouldClose()) {
-    if (IsKeyPressed(KEY_ESCAPE) || IsKeyDown(KEY_ENTER))
-      break;
     BeginDrawing();
-    ClearBackground(RAYWHITE);
+    ClearBackground(GRAY);
+    Vector2 last_position = {0, -20};
+    for (int i = 0; i < files.num_files; i++) {
+      File file = files.files[i];
+      set_file_name(&file);
+      draw_file(file, &last_position);
+    }
     EndDrawing();
   }
 
-  winclose();
   return 0;
 }

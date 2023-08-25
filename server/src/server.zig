@@ -53,7 +53,7 @@ pub const Server = struct {
         defer data_all.deinit();
         for (arr) |f| {
             // concat the path with a newline
-            const data = try std.fmt.allocPrint(self.allocator, "[ {s} \n\r {d} \n\r {s} ] \n", .{ f.path, f.size, f.mime });
+            const data = try std.fmt.allocPrint(self.allocator, "{s} \n\r {d} \n\r {s}\n", .{ f.path, f.size, f.mime });
             data_all.append(data) catch |err| {
                 std.debug.print("Array Error: {s}\n", .{@errorName(err)});
                 return;

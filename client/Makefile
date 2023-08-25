@@ -2,7 +2,7 @@ CC=cc
 SRCDIR=src
 OBJDIR=obj
 BIN=rfb-client
-FLAGS=-Wall -lraylib  
+FLAGS=-Wall -lraylib -ggdb
 
 SRCS=$(wildcard $(SRCDIR)/*.c)
 OBJS=$(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))

@@ -1,5 +1,6 @@
 client/rfb-client 
 client/obj/
+client/resources/
 
 server/public/ 
 server/zig-out/
